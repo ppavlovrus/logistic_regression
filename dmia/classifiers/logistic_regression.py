@@ -69,7 +69,7 @@ class LogisticRegression:
             #########################################################################
 
             if verbose and it % 100 == 0:
-                print('iteration %d / %d: loss %f' % (it, num_iters, loss))
+                print(f'iteration {it} / {num_iters}: loss {loss}')
 
         return self
 
@@ -93,9 +93,8 @@ class LogisticRegression:
         # Implement this method. Store the probabilities of classes in y_proba.   #
         # Hint: It might be helpful to use np.vstack and np.sum                   #
         ###########################################################################
-        probability= LogisticRegression.sigmoid(X.dot(self.w))
-        y_proba = np.vstack((1 - probability, probability)).T
-
+        proba = LogisticRegression.sigmoid(X.dot(self.w))
+        y_proba = np.vstack((1 - proba, proba)).T
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -140,19 +139,37 @@ class LogisticRegression:
         dw = np.zeros_like(self.w)  # initialize the gradient as zero
         loss = 0
         # Compute loss and gradient. Your code should not contain python loops.
+        # Loss = 1/m * (-y' * log(h) - (1 - y') * log(1 - h))
+        # https://developers.google.com/machine-learning/crash-course/logistic-regression/model-training
+        # Gradient = 1/m * Xt(g(XQ) - y)
 
+        # If z represents the output of the linear layer of a model trained with logistic regression,
+        # then sigmoid(z) will yield a value (a probability) between 0 and 1
+        # h is the output of the logistic regression model for a particular example
+
+        h = self.sigmoid(X_batch.dot(self.w))
+
+        loss = np.dot(-y_batch, np.log(h)) - np.dot((1 - y_batch), np.log(1 - h))
+        # gradient
+        dw = X_batch.T.dot(h - y_batch)
 
         # Right now the loss is a sum over all training examples, but we want it
         # to be an average instead so we divide by num_train.
         # Note that the same thing must be done with gradient.
-
-
+        num_train = X_batch.shape[0]
+        loss = loss / num_train
+        dw = dw / num_train
         # Add regularization to the loss and gradient.
         # Note that you have to exclude bias term in regularization.
-
+        loss += reg * np.dot(self.w[:-1], self.w[:-1])
+        dw[:-1] += reg * self.w[:-1]
 
         return loss, dw
 
     @staticmethod
     def append_biases(X):
         return sparse.hstack((X, np.ones(X.shape[0])[:, np.newaxis])).tocsr()
+
+    @staticmethod
+    def sigmoid(z):
+        return 1.0 / (1.0 + np.exp(-z))
